@@ -6,8 +6,6 @@ const cors = require("cors");  // <-- add this line
 const app = express();
 app.use(cors());  // <-- add this line
 
-const app = express();
-
 // --- Stremio Manifest ---
 const manifest = {
   id: "org.parentsguide",
