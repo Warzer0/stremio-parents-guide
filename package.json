@@ -1,0 +1,18 @@
+{
+  "name": "stremio-parents-guide",
+  "version": "1.0.0",
+  "description": "Stremio add-on that shows IMDb Parents Guide severity for Sex/Nudity, Violence/Gore, Profanity, Alcohol/Drugs/Smoking, Frightening/Intense Scenes.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.19.2",
+    "node-fetch": "^2.6.12",
+    "stremio-addon-sdk": "^1.7.0"
+  }
+}
