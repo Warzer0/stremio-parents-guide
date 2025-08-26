@@ -1,10 +1,12 @@
+// index.js (Corrected Version)
+
 const express = require("express");
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
-const cors = require("cors");  // <-- add this line
+const cors = require("cors");
 
 const app = express();
-app.use(cors());  // <-- add this line
+app.use(cors());
 
 // --- Stremio Manifest ---
 const manifest = {
@@ -27,7 +29,7 @@ app.get("/meta/:type/:id.json", async (req, res) => {
   const { type, id } = req.params;
 
   if (!id.startsWith("tt")) {
-    return res.json({ meta: { id, type, name: "Parents Guide", description: "IMDb ID required" } });
+    return res.json({ meta: {} }); // Return empty meta for non-IMDb IDs
   }
 
   try {
@@ -37,25 +39,37 @@ app.get("/meta/:type/:id.json", async (req, res) => {
     const $ = cheerio.load(html);
 
     const sections = {};
-    $("section[data-testid='sub-section']").each((_, el) => {
-      const label = $(el).find("h4").text().trim();
-      const severity = $(el).find("span").first().text().trim();
-      if (label) sections[label] = severity || "Not rated";
+
+    // NEW LOGIC STARTS HERE:
+    // We are now looking for each list item with the 'rating-item' test ID.
+    $("li[data-testid='rating-item']").each((_, el) => {
+
+      // The label (e.g., "Sex & Nudity:") is in an <a> tag with a specific class.
+      const label = $(el).find("a.ipc-metadata-list-item__label").text().trim().replace(":", "");
+
+      // The severity (e.g., "Mild") is in a <div> with a specific class.
+      const severity = $(el).find("div.ipc-html-content-inner-div").text().trim();
+
+      if (label && severity) {
+        sections[label] = severity;
+      }
     });
+    
+    const description = Object.entries(sections)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join("\n"); // Using newline for better formatting in Stremio
 
     res.json({
       meta: {
         id,
         type,
-        name: "IMDb Parents Guide",
-        description: Object.entries(sections)
-          .map(([k, v]) => `${k}: ${v}`)
-          .join(" | ")
+        // Let's add the guide to the movie description
+        description: description
       }
     });
   } catch (err) {
     console.error(err);
-    res.json({ meta: { id, type, name: "Parents Guide", description: "Not available" } });
+    res.json({ meta: {} }); // Return empty meta on error
   }
 });
 
@@ -64,3 +78,4 @@ const PORT = process.env.PORT || 7000;
 app.listen(PORT, () => {
   console.log("Parents Guide Add-on running on port " + PORT);
 });
+                                            
