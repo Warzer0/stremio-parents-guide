@@ -177,7 +177,7 @@ app.use("/", stremioInterface);
 // Simple health check
 app.get("/health", (req, res) => res.send("ok"));
 
+const PORT = process.env.PORT || 7000;
 app.listen(PORT, () => {
-  console.log(`Parents Guide add-on listening on :${PORT}`);
-  console.log(`Manifest: http://localhost:${PORT}/manifest.json`);
+  console.log("Addon running on port " + PORT);
 });
