@@ -7,7 +7,8 @@ const { addonBuilder } = require("stremio-addon-sdk");
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 
-const PORT = process.env.PORT || 3000;
+// --- ENV ---
+const PORT = process.env.PORT || 7000;
 const OMDB_API_KEY = process.env.OMDB_API_KEY || ""; // optional
 
 // --- helpers ---
@@ -30,7 +31,7 @@ const LABELS = [
 
 const ORDER = ["sexNudity", "violenceGore", "profanity", "alcoholDrugs", "frightening"];
 
-// Fuzzy severity detection within a section’s HTML
+// Fuzzy severity detection
 function findSeverity(html) {
   const text = html.replace(/\s+/g, " ").toLowerCase();
   if (text.includes("severe")) return "Severe";
@@ -40,9 +41,7 @@ function findSeverity(html) {
   return "Unknown";
 }
 
-// Try to locate a section by any alias and read its severity
 function extractSectionSeverity($, aliasList) {
-  // Strategy 1: look for headings that contain the alias
   const headings = $("h2, h3, h4, section, div");
   for (const el of headings.toArray()) {
     const $el = $(el);
@@ -55,7 +54,6 @@ function extractSectionSeverity($, aliasList) {
       }
     }
   }
-  // Strategy 2: search text nodes
   const body = $.root().text();
   for (const alias of aliasList) {
     const i = body.toLowerCase().indexOf(alias.toLowerCase());
@@ -99,9 +97,7 @@ async function fetchBasicMetaViaOMDb(imdbId) {
   return {};
 }
 
-// Format a human-friendly description block
 function formatDescription(sev) {
-  const line = (label, v) => `${label}: ${v}`;
   const map = {
     sexNudity: "Sex & Nudity",
     violenceGore: "Violence & Gore",
@@ -111,15 +107,15 @@ function formatDescription(sev) {
   };
   return [
     "Parents Guide:",
-    line(map.sexNudity, sev.sexNudity),
-    line(map.violenceGore, sev.violenceGore),
-    line(map.profanity, sev.profanity),
-    line(map.alcoholDrugs, sev.alcoholDrugs),
-    line(map.frightening, sev.frightening)
+    `${map.sexNudity}: ${sev.sexNudity}`,
+    `${map.violenceGore}: ${sev.violenceGore}`,
+    `${map.profanity}: ${sev.profanity}`,
+    `${map.alcoholDrugs}: ${sev.alcoholDrugs}`,
+    `${map.frightening}: ${sev.frightening}`
   ].join("\n");
 }
 
-// --- Stremio add-on manifest & handlers ---
+// --- Stremio Add-on ---
 const builder = new addonBuilder({
   id: "org.parentsguide.imdb",
   version: "1.0.0",
@@ -142,7 +138,6 @@ builder.defineMetaHandler(async ({ type, id }) => {
       fetchBasicMetaViaOMDb(imdbId)
     ]);
 
-    // Always include a useful description block
     const descBlock = formatDescription(sev);
 
     const meta = {
@@ -152,11 +147,7 @@ builder.defineMetaHandler(async ({ type, id }) => {
       year: basic.year,
       poster: basic.poster,
       description: basic.description ? (basic.description + "\n\n" + descBlock) : descBlock,
-      // Also include structured fields (in case Stremio UI shows them separately)
-      parentsGuide: {
-        order: ORDER,
-        ...sev
-      },
+      parentsGuide: { order: ORDER, ...sev },
       background: basic.poster
     };
 
@@ -167,17 +158,11 @@ builder.defineMetaHandler(async ({ type, id }) => {
   }
 });
 
-// --- Express wrapper for hosting on Render ---
+// --- Express wrapper for hosting ---
 const app = express();
-const stremioInterface = builder.getInterface();
-
-// Serve the whole add-on interface (includes /manifest.json and route handlers)
-app.use("/", stremioInterface);
-
-// Simple health check
+app.use("/", builder.getInterface());
 app.get("/health", (req, res) => res.send("ok"));
 
-const PORT = process.env.PORT || 7000;
 app.listen(PORT, () => {
   console.log("Addon running on port " + PORT);
 });
