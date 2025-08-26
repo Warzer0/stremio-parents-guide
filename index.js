@@ -3,19 +3,20 @@ const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 const cors = require("cors");
 
-// These two lines were likely deleted by accident
 const app = express();
 app.use(cors());
 
 // --- Stremio Manifest ---
+// We've changed "resources" from ["meta"] to ["stream"]
+// and added an "idPrefixes" to only activate for IMDb items.
 const manifest = {
   id: "org.parentsguide",
-  version: "1.0.0",
+  version: "1.0.1", // I've updated the version number
   name: "Parents Guide (IMDb)",
-  description: "Shows IMDb Parents Guide severities: Sex/Nudity, Violence, Profanity, Alcohol, Frightening Scenes.",
+  description: "Adds a Parents Guide summary to the stream list.",
   types: ["movie", "series"],
-  resources: ["meta"],
-  catalogs: []
+  resources: ["stream"], // This is the key change
+  idPrefixes: ["tt"]
 };
 
 // --- Manifest route ---
@@ -23,13 +24,10 @@ app.get("/manifest.json", (req, res) => {
   res.json(manifest);
 });
 
-// --- Meta enricher route ---
-app.get("/meta/:type/:id.json", async (req, res) => {
+// --- Stream provider route ---
+// This route now responds to /stream/movie/tt... requests
+app.get("/stream/:type/:id.json", async (req, res) => {
   const { type, id } = req.params;
-
-  if (!id.startsWith("tt")) {
-    return res.json({ meta: {} });
-  }
 
   try {
     const url = `https://www.imdb.com/title/${id}/parentalguide`;
@@ -46,31 +44,39 @@ app.get("/meta/:type/:id.json", async (req, res) => {
     $("li[data-testid='rating-item']").each((_, el) => {
       const label = $(el).find("a.ipc-metadata-list-item__label").text().trim().replace(":", "");
       const severity = $(el).find("div.ipc-html-content-inner-div").text().trim();
-      if (label && severity) {
-        sections[label] = severity;
+      if (label && severity && severity !== "None") {
+        // We can shorten the labels to save space
+        const shortLabel = label.replace(" & Gore", "").replace(" & Nudity", "").replace(", Drugs & Smoking", "");
+        sections[shortLabel] = severity;
       }
     });
     
-    const description = Object.entries(sections)
+    // Format the guide into a single line for the stream title
+    const guideText = Object.entries(sections)
       .map(([k, v]) => `${k}: ${v}`)
-      .join("\n");
+      .join(" | ");
 
-    res.json({
-      meta: {
-        id,
-        type,
-        description: description
-      }
-    });
+    if (!guideText) {
+      return res.json({ streams: [] });
+    }
+
+    // This is the "dummy" stream. It's not playable.
+    // Its title contains all the information.
+    const stream = {
+      title: "ℹ️ Parents Guide", // Main title
+      description: guideText // Subtitle with the details
+    };
+
+    return res.json({ streams: [stream] });
+
   } catch (err) {
     console.error(err);
-    res.json({ meta: {} });
+    return res.json({ streams: [] });
   }
 });
 
-// --- Render / Port ---
 const PORT = process.env.PORT || 7000;
 app.listen(PORT, () => {
   console.log("Parents Guide Add-on running on port " + PORT);
 });
-  
+          
