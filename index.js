@@ -36,6 +36,7 @@ app.get("/meta/:type/:id.json", async (req, res) => {
     const url = `https://www.imdb.com/title/${id}/parentalguide`;
     const response = await fetch(url);
     const html = await response.text();
+    console.log(html)
     const $ = cheerio.load(html);
 
     const sections = {};
