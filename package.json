@@ -1,18 +1,15 @@
 {
   "name": "stremio-parents-guide",
-  "version": "1.0.0",
-  "description": "Stremio add-on: IMDb Parents Guide (Sex/Nudity, Violence, Profanity, Alcohol, Frightening Scenes).",
-  "main": "index.js",
+  "version": "4.1.0",
+  "description": "IMDb Parents Guide Add-on",
+  "main": "server.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "cheerio": "^1.0.0",
-    "express": "^4.19.2",
+    "stremio-addon-sdk": "^1.6.10",
     "node-fetch": "^2.6.12",
+    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5"
-  },
-  "engines": {
-    "node": ">=18"
   }
 }
