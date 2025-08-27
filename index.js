@@ -7,13 +7,14 @@ const app = express();
 app.use(cors());
 
 // --- Stremio Manifest ---
+// We are switching back to a "stream" provider.
 const manifest = {
-  id: "org.parentsguide.final",
-  version: "3.0.1", // New version with your fallback logic
-  name: "IMDb Parents Guide",
-  description: "Adds a Parents Guide summary to the top of the movie/series description.",
+  id: "org.parentsguide.stream",
+  version: "4.0.0", // Final stream version
+  name: "IMDb Parents Guide [Stream]",
+  description: "Adds a Parents Guide summary to the stream list.",
   types: ["movie", "series"],
-  resources: ["meta"],
+  resources: ["stream"],
   idPrefixes: ["tt"]
 };
 
@@ -22,9 +23,10 @@ app.get("/manifest.json", (req, res) => {
   res.json(manifest);
 });
 
-// --- Meta enricher route ---
-app.get("/meta/:type/:id.json", async (req, res) => {
+// --- Stream provider route ---
+app.get("/stream/:type/:id.json", async (req, res) => {
   const { type, id } = req.params;
+  let guideText = "udta-teer"; // Default fallback text
 
   try {
     const url = `https://www.imdb.com/title/${id}/parentalguide`;
@@ -47,45 +49,31 @@ app.get("/meta/:type/:id.json", async (req, res) => {
       }
     });
     
-    const guideText = Object.entries(sections)
+    const realGuideText = Object.entries(sections)
       .map(([k, v]) => `${k}: ${v}`)
       .join(" | ");
 
-    // If the scraper finds nothing, we will also use the fallback text.
-    if (!guideText) {
-      throw new Error("Scraper found no data.");
+    // If the scraper found real data, use it. Otherwise, we'll use the fallback.
+    if (realGuideText) {
+      guideText = realGuideText;
     }
 
-    const newDescription = `[PARENTS GUIDE: ${guideText}]\n\n---\n\n`;
-
-    const meta = {
-        id: id,
-        type: type,
-        description: newDescription
-    };
-
-    return res.json({ meta: meta });
-
   } catch (err) {
-    // THIS IS THE NEW PART BASED ON YOUR IDEA
-    // If anything in the "try" block fails, we run this code.
-    console.error("Scraping failed, serving fallback text. Error:", err.message);
-    
-    // We create the description using your fallback text.
-    const fallbackDescription = `[PARENTS GUIDE: udta-teer]\n\n---\n\n`;
-    
-    const meta = {
-        id: id,
-        type: type,
-        description: fallbackDescription
-    };
-
-    return res.json({ meta: meta });
+    console.error("Scraping failed, will serve fallback text. Error:", err.message);
+    // If an error occurs, guideText is already set to "udta-teer"
   }
+
+  // This is the "dummy" stream that will always be created.
+  const stream = {
+    title: "ℹ️ Parents Guide", // Main title in the list
+    description: guideText // The subtitle with the details or "udta-teer"
+  };
+
+  return res.json({ streams: [stream] });
 });
 
 const PORT = process.env.PORT || 7000;
 app.listen(PORT, () => {
   console.log("Parents Guide Add-on running on port " + PORT);
 });
-  
+                                                                                        
