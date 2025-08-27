@@ -7,15 +7,16 @@ const app = express();
 app.use(cors());
 
 // --- Stremio Manifest ---
-// I've removed the "idPrefixes" line to make the add-on more compatible.
+// We are changing the add-on to be a "meta" provider
+// that will add a video to the details page.
 const manifest = {
-  id: "org.parentsguide",
-  version: "1.0.2", // Updated version again
-  name: "IMDb Parents Guide", // Simplified the name slightly
-  description: "Adds a Parents Guide summary to the stream list.",
+  id: "org.parentsguide.infobox",
+  version: "2.0.0", // Major version update
+  name: "IMDb Parents Guide Box",
+  description: "Creates a separate box with Parents Guide info on the details page.",
   types: ["movie", "series"],
-  resources: ["stream"]
-  // "idPrefixes" has been removed from here.
+  resources: ["meta"],
+  idPrefixes: ["tt"]
 };
 
 // --- Manifest route ---
@@ -23,15 +24,10 @@ app.get("/manifest.json", (req, res) => {
   res.json(manifest);
 });
 
-// The rest of your code remains exactly the same...
-// --- Stream provider route ---
-app.get("/stream/:type/:id.json", async (req, res) => {
+// --- Meta enricher route ---
+// This now provides a "videos" array to create the box
+app.get("/meta/:type/:id.json", async (req, res) => {
   const { type, id } = req.params;
-
-  // Added this check back in to be safe
-  if (!id.startsWith("tt")) {
-    return res.json({ streams: [] });
-  }
 
   try {
     const url = `https://www.imdb.com/title/${id}/parentalguide`;
@@ -59,19 +55,29 @@ app.get("/stream/:type/:id.json", async (req, res) => {
       .join(" | ");
 
     if (!guideText) {
-      return res.json({ streams: [] });
+      return res.json({ meta: {} });
     }
 
-    const stream = {
-      title: "ℹ️ Parents Guide",
-      description: guideText
+    // This is the "dummy" video object.
+    // We use its properties to display our info.
+    const dummyVideo = {
+        id: id + ":pguide", // Unique ID for our video
+        title: "IMDb Parents Guide", // The title of the box
+        released: guideText // We use the "released" field to show the guide text
     };
 
-    return res.json({ streams: [stream] });
+    // We return this inside a "videos" array in the meta object.
+    const meta = {
+        id: id,
+        type: type,
+        videos: [dummyVideo]
+    };
+
+    return res.json({ meta: meta });
 
   } catch (err) {
     console.error(err);
-    return res.json({ streams: [] });
+    return res.json({ meta: {} });
   }
 });
 
@@ -79,3 +85,4 @@ const PORT = process.env.PORT || 7000;
 app.listen(PORT, () => {
   console.log("Parents Guide Add-on running on port " + PORT);
 });
+  
