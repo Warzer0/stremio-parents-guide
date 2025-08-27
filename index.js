@@ -7,13 +7,11 @@ const app = express();
 app.use(cors());
 
 // --- Stremio Manifest ---
-// We are changing the add-on to be a "meta" provider
-// that will add a video to the details page.
 const manifest = {
-  id: "org.parentsguide.infobox",
-  version: "2.0.0", // Major version update
-  name: "IMDb Parents Guide Box",
-  description: "Creates a separate box with Parents Guide info on the details page.",
+  id: "org.parentsguide.final",
+  version: "3.0.1", // New version with your fallback logic
+  name: "IMDb Parents Guide",
+  description: "Adds a Parents Guide summary to the top of the movie/series description.",
   types: ["movie", "series"],
   resources: ["meta"],
   idPrefixes: ["tt"]
@@ -25,7 +23,6 @@ app.get("/manifest.json", (req, res) => {
 });
 
 // --- Meta enricher route ---
-// This now provides a "videos" array to create the box
 app.get("/meta/:type/:id.json", async (req, res) => {
   const { type, id } = req.params;
 
@@ -54,30 +51,36 @@ app.get("/meta/:type/:id.json", async (req, res) => {
       .map(([k, v]) => `${k}: ${v}`)
       .join(" | ");
 
+    // If the scraper finds nothing, we will also use the fallback text.
     if (!guideText) {
-      return res.json({ meta: {} });
+      throw new Error("Scraper found no data.");
     }
 
-    // This is the "dummy" video object.
-    // We use its properties to display our info.
-    const dummyVideo = {
-        id: id + ":pguide", // Unique ID for our video
-        title: "IMDb Parents Guide", // The title of the box
-        released: guideText // We use the "released" field to show the guide text
-    };
+    const newDescription = `[PARENTS GUIDE: ${guideText}]\n\n---\n\n`;
 
-    // We return this inside a "videos" array in the meta object.
     const meta = {
         id: id,
         type: type,
-        videos: [dummyVideo]
+        description: newDescription
     };
 
     return res.json({ meta: meta });
 
   } catch (err) {
-    console.error(err);
-    return res.json({ meta: {} });
+    // THIS IS THE NEW PART BASED ON YOUR IDEA
+    // If anything in the "try" block fails, we run this code.
+    console.error("Scraping failed, serving fallback text. Error:", err.message);
+    
+    // We create the description using your fallback text.
+    const fallbackDescription = `[PARENTS GUIDE: udta-teer]\n\n---\n\n`;
+    
+    const meta = {
+        id: id,
+        type: type,
+        description: fallbackDescription
+    };
+
+    return res.json({ meta: meta });
   }
 });
 
