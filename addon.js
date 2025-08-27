@@ -2,20 +2,22 @@ const { addonBuilder } = require("stremio-addon-sdk");
 const fetch = require("node-fetch");
 const cheerio = require("cheerio");
 
+// The manifest now includes the required "catalogs" property
 const manifest = {
   id: "org.parentsguide.sdk",
-  version: "4.1.0",
+  version: "4.1.1", // New version number
   name: "IMDb Parents Guide [SDK]",
   description: "Adds a Parents Guide summary to the stream list.",
-  types: ["movie", "series"],
   resources: ["stream"],
+  types: ["movie", "series"],
+  catalogs: [], // <-- THIS IS THE LINE THAT WAS MISSING
   idPrefixes: ["tt"]
 };
 
 const builder = new addonBuilder(manifest);
 
 builder.defineStreamHandler(async function(args) {
-  let guideText = "udta-teer"; // Default fallback text
+  let guideText = "udta-teer";
 
   try {
     const url = `https://www.imdb.com/title/${args.id}/parentalguide`;
