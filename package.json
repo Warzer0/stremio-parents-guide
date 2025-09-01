@@ -1,12 +1,11 @@
 {
   "name": "stremio-parents-guide",
-  "version": "7.0.0",
-  "description": "IMDb Parents Guide Add-on with Landing Page",
+  "version": "7.1.0",
+  "description": "IMDb Parents Guide Add-on",
   "main": "api/index.js",
   "dependencies": {
     "stremio-addon-sdk": "^1.6.10",
     "node-fetch": "^2.6.12",
-    "cheerio": "^1.0.0-rc.12",
-    "express": "^4.19.2"
+    "cheerio": "^1.0.0-rc.12"
   }
 }
